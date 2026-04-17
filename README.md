@@ -1,6 +1,6 @@
-# Itiner
+# ItinerAI
 
-Premium AI travel planner: React + Vite + Tailwind frontend, Express + OpenAI backend. OpenAI is only called from the server; the API key never ships to the browser.
+AI-assisted travel itineraries: a React + Vite + Tailwind client talks to an Express API that calls OpenAI. **The OpenAI API key stays on the server** and is never exposed to the browser.
 
 ## Prerequisites
 
@@ -9,53 +9,59 @@ Premium AI travel planner: React + Vite + Tailwind frontend, Express + OpenAI ba
 
 ## Setup
 
-1. Clone the repo and install dependencies from the monorepo root:
+From the repository root:
 
 ```bash
 npm install
 ```
 
-2. Configure the server:
+Configure the server:
 
 ```bash
 cp server/.env.example server/.env
 ```
 
-Edit `server/.env` and set `OPENAI_API_KEY`.
+Edit `server/.env` and set `OPENAI_API_KEY`. Optional: `PORT` (default **3001**).
 
 ## Development
 
-Run the API and the Vite dev server together (Express on port **3001**, Vite on **5173**; the client proxies `/api` to the server):
+Runs the API and Vite together: Express on **3001**, Vite on **5173**. The dev server proxies `/api` to the backend.
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Open [http://localhost:5173](http://localhost:5173).
 
 ## Production build
+
+Builds the server TypeScript and the client bundle:
 
 ```bash
 npm run build
 ```
 
-Run the compiled server (serves only the API; host the client `client/dist` behind the same origin or a CDN and align `/api` routing):
+Start the compiled API:
 
 ```bash
 npm run start
 ```
 
+The server serves the itinerary API only. Deploy `client/dist` with your static host and route `/api` to the same origin as the app (or adjust the client’s API base URL to match your deployment).
+
 ## Rate limiting
 
-- **POST `/api/itinerary`:** 5 requests per minute per IP. When exceeded, the API returns **429** with: `Too many requests, please try again later`.
-- **GET `/api/itinerary/:requestId`:** 120 requests per minute per IP so the UI can poll every 2–3 seconds without hitting the generation cap.
+- **POST `/api/itinerary`:** 5 requests per minute per IP. When exceeded, the API returns **429** with `Too many requests, please try again later`.
+- **GET `/api/itinerary/:requestId`:** 120 requests per minute per IP so the UI can poll every few seconds without competing with the stricter POST limit.
 
-## Persistence & refresh
+## Client behavior
 
-- The active `requestId` is stored in `localStorage`. If a trip is still **pending**, reloading the app resumes polling and does **not** start a new generation.
-- Completed trips are saved to `localStorage` so they remain available after a server restart (the in-memory job store is ephemeral).
+- **Active trip:** The current `requestId` is stored in `localStorage`. If a job is still **pending**, returning to the app resumes polling instead of starting a new run.
+- **Saved trips:** Completed itineraries are stored locally. Open **Saved trips** (header or trip sidebar) to browse and reopen them; data is **this device only** and survives a server restart (the in-memory job store does not).
 
 ## Project layout
 
-- `client/` — Vite + React + TypeScript + Tailwind
-- `server/` — Express + OpenAI (`gpt-4o-mini`)
+| Path | Role |
+|------|------|
+| `client/` | Vite, React, TypeScript, Tailwind, React Router |
+| `server/` | Express, OpenAI (`gpt-4o-mini`), JSON itinerary generation |
