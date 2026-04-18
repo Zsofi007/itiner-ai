@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { generateItinerary } from "../server/src/generateItinerary";
+import { generateItinerary } from "../server/src/generateItinerary.ts";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
