@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { generateItinerary } from "../server/src/generateItinerary.ts";
+// Use `.js` for NodeNext: Vercel bundles this to JS; `.ts` paths do not exist at runtime in `/var/task`.
+import { generateItinerary } from "../server/src/generateItinerary.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
