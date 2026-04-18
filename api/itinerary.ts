@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     style: style.trim(),
   });
 
-  if (!result.ok) {
+  if (result.ok === false) {
     return res.status(200).json({
       requestId: result.requestId,
       status: "error" as const,
