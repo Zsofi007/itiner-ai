@@ -22,15 +22,11 @@ export interface ItineraryJSON {
   culturalTips: string[];
   foodRecommendations: FoodRecommendation[];
   days: DayPlan[];
+  heroImageUrl?: string;
+  pixabaySearchQuery?: string;
 }
 
-export type JobStatus = "pending" | "completed" | "error";
-
-export interface ItineraryJobResponse {
-  status: JobStatus;
-  data: ItineraryJSON | null;
-  errorMessage?: string;
-}
+export type JobStatus = "completed" | "error";
 
 export interface PostItineraryResponse {
   requestId: string;

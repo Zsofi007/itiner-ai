@@ -31,7 +31,7 @@ export function TripPageHeader({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-full border border-slate-200/90 bg-white/90 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:border-slate-600"
+              className="rounded-full border border-slate-200/90 bg-white/90 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-[colors,transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:border-slate-600"
             >
               Cancel
             </button>

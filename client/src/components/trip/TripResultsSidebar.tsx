@@ -39,7 +39,7 @@ export function TripResultsSidebar({ summary }: Props) {
           <button
             type="button"
             onClick={openSavedTripsDrawer}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-teal-200/90 bg-teal-50/90 px-4 py-3 text-sm font-semibold text-teal-950 shadow-sm transition hover:border-teal-400 hover:bg-teal-100 dark:border-teal-800/50 dark:bg-teal-950/40 dark:text-teal-50 dark:hover:border-teal-600 dark:hover:bg-teal-900/50"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-teal-200/90 bg-teal-50/90 px-4 py-3 text-sm font-semibold text-teal-950 shadow-sm transition-[colors,transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-100 hover:shadow-md active:translate-y-0 active:scale-[0.99] dark:border-teal-800/50 dark:bg-teal-950/40 dark:text-teal-50 dark:hover:border-teal-600 dark:hover:bg-teal-900/50"
           >
             <Library className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
             Open trip library

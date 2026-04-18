@@ -21,7 +21,7 @@ Configure the server:
 cp server/.env.example server/.env
 ```
 
-Edit `server/.env` and set `OPENAI_API_KEY`. Optional: `PORT` (default **3001**).
+Edit `server/.env` and set `OPENAI_API_KEY`. Optional: `PIXABAY_API_KEY`, `PORT` (default **3001**), and `ALLOWED_ORIGINS` (comma-separated URLs for Express CORS in local/production API hosting).
 
 ## Development
 
@@ -47,16 +47,22 @@ Start the compiled API:
 npm run start
 ```
 
-The server serves the itinerary API only. Deploy `client/dist` with your static host and route `/api` to the same origin as the app (or adjust the client’s API base URL to match your deployment).
+The server serves the itinerary API only (`POST /api/itinerary` returns the completed itinerary in one response).
+
+## Deploy on Vercel
+
+- Connect the repo and use the included [`vercel.json`](vercel.json): static **Vite** build from `client/dist`, plus **Serverless** [`api/itinerary.ts`](api/itinerary.ts).
+- In the Vercel project **Settings → Environment Variables**, set **`OPENAI_API_KEY`** and optional **`PIXABAY_API_KEY`** (same as local).
+- [`vercel.json`](vercel.json) sets **`maxDuration`: 60** for this route (useful on Pro). On **Hobby**, Vercel caps execution time (often **10s**); if requests time out, upgrade or trim the OpenAI/Pixabay work.
 
 ## Rate limiting
 
-- **POST `/api/itinerary`:** 5 requests per minute per IP. When exceeded, the API returns **429** with `Too many requests, please try again later`.
-- **GET `/api/itinerary/:requestId`:** 120 requests per minute per IP so the UI can poll every few seconds without competing with the stricter POST limit.
+- **POST `/api/itinerary`:** 5 requests per minute per IP (Express dev server). When exceeded, the API returns **429** with `Too many requests, please try again later`.
+- **Vercel:** the serverless route does not use the Express limiter; for a portfolio this is usually fine.
 
 ## Client behavior
 
-- **Active trip:** The current `requestId` is stored in `localStorage`. If a job is still **pending**, returning to the app resumes polling instead of starting a new run.
+- **Active trip:** The current `requestId` is stored in `localStorage`. Planning is **synchronous**: the client waits for `POST /api/itinerary`, then navigates to the trip with the itinerary in router state (and saves it locally).
 - **Saved trips:** Completed itineraries are stored locally. Open **Saved trips** (header or trip sidebar) to browse and reopen them; data is **this device only** and survives a server restart (the in-memory job store does not).
 
 ## Project layout

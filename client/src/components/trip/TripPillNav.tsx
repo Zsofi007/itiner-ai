@@ -21,12 +21,13 @@ export function TripPillNav({ activeTab, onTabChange, counts }: Props) {
                 type="button"
                 role="tab"
                 aria-selected={active}
+                aria-label={t.label}
                 onClick={() => onTabChange(t.id)}
                 title={t.hint}
-                className={`group relative flex shrink-0 snap-center items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors sm:px-5 ${
+                className={`group relative flex shrink-0 snap-center items-center gap-2 rounded-full border py-2.5 text-sm font-semibold transition-[colors,transform,box-shadow,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] ${
                   active
-                    ? "border-teal-500/70 bg-teal-50 text-teal-950 shadow-sm dark:border-teal-500/50 dark:bg-teal-950/50 dark:text-teal-50"
-                    : "border-slate-200/80 bg-white/90 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+                    ? "px-4 sm:px-5 border-teal-500/70 bg-teal-50 text-teal-950 shadow-sm dark:border-teal-500/50 dark:bg-teal-950/50 dark:text-teal-50"
+                    : "px-3 sm:px-3.5 border-slate-200/80 bg-white/90 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-100 hover:px-4 sm:hover:px-5"
                 }`}
               >
                 <Icon
@@ -34,8 +35,17 @@ export function TripPillNav({ activeTab, onTabChange, counts }: Props) {
                   strokeWidth={2}
                   aria-hidden
                 />
-                <span className="hidden sm:inline">{t.label}</span>
-                <span className="sm:hidden">{t.short}</span>
+                <span
+                  aria-hidden={!active}
+                  className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    active
+                      ? "max-w-[12rem] opacity-100"
+                      : "max-w-0 opacity-0 group-hover:max-w-[12rem] group-hover:opacity-100 group-focus-visible:max-w-[12rem] group-focus-visible:opacity-100"
+                  }`}
+                >
+                  <span className="hidden sm:inline">{t.label}</span>
+                  <span className="sm:hidden">{t.short}</span>
+                </span>
                 <span
                   className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
                     active

@@ -114,12 +114,24 @@ export function SavedTripsDrawer({ open, onClose, onSelectTrip }: Props) {
                       <button
                         type="button"
                         onClick={() => onSelectTrip(t)}
-                        className="group flex w-full items-start gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-indigo-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500"
+                        className="group flex w-full items-stretch gap-3 rounded-2xl border-2 border-slate-200 bg-white p-3 text-left shadow-sm transition-[colors,transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md active:translate-y-0 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500"
                       >
-                        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300">
-                          <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
+                        {t.itinerary.heroImageUrl ? (
+                          <span className="relative w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200/80 dark:ring-slate-600">
+                            <img
+                              src={t.itinerary.heroImageUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </span>
+                        ) : (
+                          <span className="flex w-20 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300">
+                            <MapPin className="h-4 w-4" strokeWidth={2} aria-hidden />
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1 py-1">
                           <span className="block font-semibold text-slate-900 dark:text-white">
                             {t.destination}
                           </span>
@@ -128,7 +140,7 @@ export function SavedTripsDrawer({ open, onClose, onSelectTrip }: Props) {
                           </span>
                         </span>
                         <ChevronRight
-                          className="mt-1 h-5 w-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-indigo-600 dark:text-slate-500"
+                          className="mt-1 h-5 w-5 shrink-0 self-start text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-indigo-600 dark:text-slate-500"
                           strokeWidth={2}
                           aria-hidden
                         />

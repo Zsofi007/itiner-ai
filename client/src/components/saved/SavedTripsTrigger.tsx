@@ -13,7 +13,7 @@ export function SavedTripsTrigger({ variant = "default" }: Props) {
     <button
       type="button"
       onClick={openSavedTripsDrawer}
-      className={`inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/80 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/80 hover:text-teal-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-teal-600 dark:hover:bg-teal-950/40 dark:hover:text-teal-100 ${
+      className={`inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/80 text-sm font-medium text-slate-700 shadow-sm transition-[colors,transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/80 hover:text-teal-900 hover:shadow-md active:translate-y-0 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-teal-600 dark:hover:bg-teal-950/40 dark:hover:text-teal-100 ${
         variant === "compact"
           ? "h-10 px-2.5 sm:min-w-0 sm:gap-2 sm:px-3"
           : "h-10 px-4"

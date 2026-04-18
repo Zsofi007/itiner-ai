@@ -1,16 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { LandingPlanForm } from "@/components/landing/LandingPlanForm";
 import { SavedTripsTrigger } from "@/components/saved/SavedTripsTrigger";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ApiError, getItinerary, postItinerary } from "@/lib/api";
-import { itinerLog, itinerWarn } from "@/lib/logger";
-import {
-  clearCurrentRequestId,
-  getCurrentRequestId,
-  setCurrentRequestId,
-} from "@/lib/storage";
+import { itinerLog } from "@/lib/logger";
+import { setCurrentRequestId } from "@/lib/storage";
 import type { ThemeMode } from "@/lib/storage";
 
 type Props = {
@@ -26,40 +21,6 @@ export function LandingPage({ theme, onToggleTheme }: Props) {
   const [style, setStyle] = useState<string>("chill");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const id = getCurrentRequestId();
-    if (!id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        itinerLog("landing", "resume check: existing requestId in storage", {
-          requestId: id,
-        });
-        const job = await getItinerary(id);
-        if (cancelled) return;
-        if (job.status === "pending") {
-          itinerLog("landing", "resume → navigate /trip (still pending)", {
-            requestId: id,
-          });
-          navigate("/trip", { replace: true });
-        } else {
-          itinerLog("landing", "resume check: not pending, stay on home", {
-            requestId: id,
-            status: job.status,
-          });
-        }
-      } catch (e) {
-        itinerWarn("landing", "resume check failed (server may have restarted)", {
-          requestId: id,
-          error: e,
-        });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,30 +38,19 @@ export function LandingPage({ theme, onToggleTheme }: Props) {
       style,
     });
 
-    try {
-      await postItinerary({
-        destination: destination.trim(),
-        days,
-        budget,
-        style,
+    // Navigate immediately so the user sees the trip skeleton while we generate.
+    navigate("/trip", {
+      state: {
         requestId,
-      });
-      itinerLog("landing", "POST ok → navigate /trip", { requestId });
-      navigate("/trip", { state: { requestId } });
-    } catch (err) {
-      clearCurrentRequestId();
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.";
-      itinerWarn("landing", "generate trip failed", {
-        requestId,
-        message: msg,
-        err,
-      });
-      setError(msg);
-      setSubmitting(false);
-    }
+        fromPlanner: true,
+        plannerInput: {
+          destination: destination.trim(),
+          days,
+          budget,
+          style,
+        },
+      },
+    });
   }
 
   return (

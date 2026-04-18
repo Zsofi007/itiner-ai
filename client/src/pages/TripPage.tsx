@@ -1,11 +1,5 @@
 import { motion } from "framer-motion";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { TripDestinationHero } from "@/components/trip/TripDestinationHero";
 import { TripErrorCard } from "@/components/trip/TripErrorCard";
@@ -13,8 +7,8 @@ import { TripItineraryViews } from "@/components/trip/TripItineraryViews";
 import { TripPageHeader } from "@/components/trip/TripPageHeader";
 import { TripResultsSidebar } from "@/components/trip/TripResultsSidebar";
 import { TripPageSkeleton } from "@/components/Skeleton";
-import { ApiError, getItinerary } from "@/lib/api";
-import { itinerError, itinerLog, itinerWarn } from "@/lib/logger";
+import { ApiError, postItinerary } from "@/lib/api";
+import { itinerLog, itinerWarn } from "@/lib/logger";
 import { useTypingEffect } from "@/hooks/useTypingEffect";
 import {
   clearCurrentRequestId,
@@ -31,9 +25,19 @@ type Props = {
   onToggleTheme: () => void;
 };
 
-type Phase = "loading" | "pending" | "completed" | "error";
+type Phase = "loading" | "completed" | "error";
 
-type TripLocationState = { requestId?: string };
+type TripLocationState = {
+  requestId?: string;
+  itinerary?: ItineraryJSON;
+  fromPlanner?: boolean;
+  plannerInput?: {
+    destination: string;
+    days: number;
+    budget: string;
+    style: string;
+  };
+};
 
 export function TripPage({ theme, onToggleTheme }: Props) {
   const navigate = useNavigate();
@@ -53,9 +57,7 @@ export function TripPage({ theme, onToggleTheme }: Props) {
   const [itinerary, setItinerary] = useState<ItineraryJSON | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewingSavedId, setViewingSavedId] = useState<string | null>(null);
-  const stopped = useRef(false);
-  const pollTimeout = useRef(0);
-  const pollCount = useRef(0);
+  const startedRef = useRef(false);
 
   const displayItinerary = itinerary;
   const typedSummary = useTypingEffect(
@@ -64,137 +66,93 @@ export function TripPage({ theme, onToggleTheme }: Props) {
     10,
   );
 
-  useEffect(() => {
-    itinerLog("trip", "phase changed", { phase, requestId, errorMessage });
-  }, [phase, requestId, errorMessage]);
-
-  useEffect(() => {
-    stopped.current = false;
-    window.clearTimeout(pollTimeout.current);
-    pollCount.current = 0;
-
+  useLayoutEffect(() => {
     if (requestId == null || requestId === "") {
-      return () => {
-        stopped.current = true;
-      };
+      setPhase("loading");
+      return;
     }
-    const activeRequestId: string = requestId;
 
-    itinerLog("trip", "poll loop started", {
-      requestId: activeRequestId,
-      fromNav: Boolean(navRequestId),
-      fromStorage: Boolean(storedRequestId),
-    });
+    const st = location.state as TripLocationState | null;
 
-    const pollMs = () => 2000 + Math.random() * 1000;
+    // While router state still carries planner input, stay on the loading path.
+    // (A second effect run used to skip this block because startedRef was already true,
+    // then fell through to "no saved trip" and flashed a bogus error before the request finished.)
+    if (st?.fromPlanner && st.plannerInput) {
+      const input = st.plannerInput;
+      if (!startedRef.current) {
+        startedRef.current = true;
+        setPhase("loading");
+        setErrorMessage(null);
+        setViewingSavedId(null);
 
-    async function tick(): Promise<boolean> {
-      if (stopped.current) return true;
-      pollCount.current += 1;
-      const n = pollCount.current;
-      try {
-        const job = await getItinerary(activeRequestId);
-        if (stopped.current) return true;
-
-        itinerLog("trip", `poll #${n} response`, {
-          requestId: activeRequestId,
-          status: job.status,
-          hasData: Boolean(job.data),
-          errorMessage: job.errorMessage,
-        });
-
-        if (job.status === "completed" && job.data) {
-          setItinerary(job.data);
-          setPhase("completed");
-          setViewingSavedId(null);
-          upsertSavedTrip({
-            id: activeRequestId,
-            destination: job.data.destination,
-            summary: job.data.summary,
-            itinerary: job.data,
-            savedAt: new Date().toISOString(),
-          });
-          itinerLog("trip", "itinerary completed; saved to localStorage", {
-            requestId: activeRequestId,
-          });
-          return true;
-        }
-
-        if (job.status === "error") {
-          itinerWarn("trip", "job status error from API", {
-            requestId: activeRequestId,
-            errorMessage:
-              job.errorMessage ?? "We could not generate your itinerary.",
-          });
-          setPhase("error");
-          setErrorMessage(
-            job.errorMessage ?? "We could not generate your itinerary.",
-          );
-          return true;
-        }
-
-        setPhase("pending");
-        return false;
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 404) {
-          const saved = getSavedTripById(activeRequestId);
-          if (saved) {
-            itinerLog("trip", "GET 404 — hydrated from saved trips", {
-              requestId: activeRequestId,
+        void (async () => {
+          try {
+            const response = await postItinerary({
+              requestId,
+              destination: input.destination,
+              days: input.days,
+              budget: input.budget,
+              style: input.style,
             });
-            setItinerary(saved.itinerary);
-            setViewingSavedId(activeRequestId);
+            if (!response.data) throw new Error("Missing itinerary data");
+
+            setItinerary(response.data);
             setPhase("completed");
-            return true;
+            upsertSavedTrip({
+              id: requestId,
+              destination: response.data.destination,
+              summary: response.data.summary,
+              itinerary: response.data,
+              savedAt: new Date().toISOString(),
+            });
+
+            itinerLog("trip", "generation completed on trip page", { requestId });
+            navigate(".", { replace: true, state: { requestId } });
+          } catch (err) {
+            const msg =
+              err instanceof ApiError
+                ? err.message
+                : "Something went wrong. Please try again.";
+            itinerWarn("trip", "generation failed on trip page", {
+              requestId,
+              message: msg,
+              err,
+            });
+            setPhase("error");
+            setErrorMessage(msg);
+            navigate(".", { replace: true, state: {} });
           }
-        }
-        const msg =
-          err instanceof ApiError
-            ? err.message
-            : "Something went wrong while loading your trip.";
-        itinerError("trip", `poll #${n} failed`, err);
-        setPhase("error");
-        setErrorMessage(msg);
-        return true;
+        })();
       }
+      return;
     }
 
-    function schedule(next: () => void) {
-      const delay = pollMs();
-      itinerLog("trip", "schedule next poll", { ms: Math.round(delay) });
-      pollTimeout.current = window.setTimeout(next, delay);
+    const saved = getSavedTripById(requestId);
+    if (saved) {
+      setItinerary(saved.itinerary);
+      setPhase("completed");
+      setViewingSavedId(requestId);
+      setErrorMessage(null);
+      itinerLog("trip", "hydrated from saved trips", { requestId });
+      return;
     }
 
-    void (async function run() {
-      let done = await tick();
-      const loop = async () => {
-        if (stopped.current || done) return;
-        done = await tick();
-        if (!done && !stopped.current) schedule(loop);
-      };
-      if (!done && !stopped.current) schedule(loop);
-    })();
-
-    return () => {
-      itinerLog("trip", "poll loop cleanup", { requestId: activeRequestId });
-      stopped.current = true;
-      window.clearTimeout(pollTimeout.current);
-    };
-  }, [requestId, navRequestId, storedRequestId]);
+    setPhase("error");
+    setErrorMessage(
+      "We couldn't load this trip. It may be from an older session—start a new plan from home.",
+    );
+    itinerLog("trip", "no data for requestId", { requestId });
+  }, [requestId, location.state, navigate]);
 
   function handleNewTrip() {
     itinerLog("trip", "plan another trip — clearing requestId");
-    stopped.current = true;
-    window.clearTimeout(pollTimeout.current);
     clearCurrentRequestId();
     setViewingSavedId(null);
     navigate("/", { replace: true });
   }
 
   function handleCancel() {
-    itinerLog("trip", "cancel — clearing requestId (server may still finish)");
-    stopped.current = true;
-    window.clearTimeout(pollTimeout.current);
+    itinerLog("trip", "cancel — clearing requestId");
     clearCurrentRequestId();
     setViewingSavedId(null);
     navigate("/", { replace: true });
@@ -243,16 +201,20 @@ export function TripPage({ theme, onToggleTheme }: Props) {
       <TripPageHeader
         theme={theme}
         onToggleTheme={onToggleTheme}
-        showCancel={phase === "loading" || phase === "pending"}
+        showCancel={phase === "loading"}
         onCancel={handleCancel}
       />
 
-      <main className="page-container py-10 sm:py-12">
-        {phase === "loading" || phase === "pending" ? (
+      <main
+        className={`page-container py-10 sm:py-12 ${
+          phase === "completed" ? "pb-28 sm:pb-12" : ""
+        }`}
+      >
+        {phase === "loading" ? (
           <div key="loading">
             <TripPageSkeleton />
             <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-              Crafting your itinerary… this usually takes a moment.
+              Loading your itinerary…
             </p>
           </div>
         ) : null}
@@ -273,6 +235,7 @@ export function TripPage({ theme, onToggleTheme }: Props) {
               <TripDestinationHero
                 destination={displayItinerary.destination}
                 isSavedView={Boolean(viewingSavedId)}
+                heroImageUrl={displayItinerary.heroImageUrl}
               />
 
               <TripItineraryViews
@@ -281,7 +244,7 @@ export function TripPage({ theme, onToggleTheme }: Props) {
                 tripKey={tripContentKey}
               />
 
-              <div className="pb-12">
+              <div className="hidden pb-12 sm:block">
                 <button
                   type="button"
                   onClick={handleNewTrip}
@@ -294,6 +257,20 @@ export function TripPage({ theme, onToggleTheme }: Props) {
 
             <TripResultsSidebar summary={sidebarSummary} />
           </motion.div>
+        ) : null}
+
+        {phase === "completed" ? (
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 sm:hidden">
+            <div className="page-container px-4 py-3">
+              <button
+                type="button"
+                onClick={handleNewTrip}
+                className="w-full rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-500"
+              >
+                Plan another trip
+              </button>
+            </div>
+          </div>
         ) : null}
       </main>
     </div>

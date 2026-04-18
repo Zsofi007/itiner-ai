@@ -1,5 +1,3 @@
-export type RequestStatus = "pending" | "completed" | "error";
-
 export interface FoodRecommendation {
   name: string;
   description: string;
@@ -24,10 +22,9 @@ export interface ItineraryJSON {
   culturalTips: string[];
   foodRecommendations: FoodRecommendation[];
   days: DayPlan[];
+  /** Set by server after Pixabay lookup */
+  heroImageUrl?: string;
+  /** Optional; model may suggest keywords before server fetches the image */
+  pixabaySearchQuery?: string;
 }
 
-export interface StoredRequest {
-  status: RequestStatus;
-  data: ItineraryJSON | null;
-  errorMessage?: string;
-}

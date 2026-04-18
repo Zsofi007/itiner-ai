@@ -1,8 +1,5 @@
 import { itinerError, itinerLog, itinerWarn } from "@/lib/logger";
-import type {
-  ItineraryJobResponse,
-  PostItineraryResponse,
-} from "@/types/itinerary";
+import type { PostItineraryResponse } from "@/types/itinerary";
 
 export class ApiError extends Error {
   status: number;
@@ -45,7 +42,9 @@ export async function postItinerary(body: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await parseJson<PostItineraryResponse & { error?: string }>(res);
+  const data = await parseJson<
+    PostItineraryResponse & { error?: string }
+  >(res);
   if (!res.ok) {
     const msg =
       data.error ??
@@ -59,37 +58,26 @@ export async function postItinerary(body: {
     });
     throw new ApiError(msg, res.status, data);
   }
-  itinerLog("api", "POST /api/itinerary ← ok", {
-    requestId: data.requestId,
-    status: data.status,
-    hasData: Boolean(data.data),
-  });
-  return data;
-}
 
-export async function getItinerary(
-  requestId: string,
-): Promise<ItineraryJobResponse> {
-  const res = await fetch(`/api/itinerary/${encodeURIComponent(requestId)}`);
-  const data = await parseJson<
-    ItineraryJobResponse & { error?: string }
-  >(res);
-  if (res.status === 404) {
-    itinerWarn("api", "GET /api/itinerary/:id ← 404", { requestId });
-    throw new ApiError("Request not found.", 404, data);
-  }
-  if (!res.ok) {
+  if (data.status === "error") {
     const msg =
-      data.error ??
-      (res.status === 429
-        ? "Too many requests, please try again later"
-        : "Something went wrong.");
-    itinerError("api", "GET /api/itinerary/:id ← error", {
-      requestId,
-      status: res.status,
+      data.errorMessage ??
+      "We could not generate your itinerary. Please try again.";
+    itinerWarn("api", "POST /api/itinerary ← generation error", {
+      requestId: data.requestId,
       message: msg,
     });
-    throw new ApiError(msg, res.status, data);
+    throw new ApiError(msg, 400, data);
   }
-  return data;
+
+  if (data.status === "completed" && data.data) {
+    itinerLog("api", "POST /api/itinerary ← ok", {
+      requestId: data.requestId,
+      hasData: true,
+    });
+    return data;
+  }
+
+  itinerError("api", "POST /api/itinerary ← unexpected body", { body: data });
+  throw new ApiError("Unexpected response from server.", 500, data);
 }
