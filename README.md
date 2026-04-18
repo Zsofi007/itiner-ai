@@ -1,6 +1,6 @@
 # ItinerAI
 
-AI-assisted travel itineraries: a React + Vite + Tailwind client talks to an Express API that calls OpenAI. **The OpenAI API key stays on the server** and is never exposed to the browser.
+AI-assisted travel itineraries: a React + Vite + Tailwind client calls **`POST /api/itinerary`**, which is served by **Express in development** and by a **Vercel serverless function** in production. The backend calls OpenAI (and optionally Pixabay for hero images). **API keys stay on the server** and are never exposed to the browser.
 
 ## Prerequisites
 
@@ -51,23 +51,28 @@ The server serves the itinerary API only (`POST /api/itinerary` returns the comp
 
 ## Deploy on Vercel
 
-- Connect the repo and use the included [`vercel.json`](vercel.json): static **Vite** build from `client/dist`, plus **Serverless** [`api/itinerary.ts`](api/itinerary.ts).
+- Connect the repo and use the included [`vercel.json`](vercel.json): it runs **`npm run build -w client`** (static output in `client/dist`) and deploys **Serverless** [`api/itinerary.ts`](api/itinerary.ts). The root **`npm run build`** still builds **server + client** for local checks; Vercel does not need the Express `dist` for routing.
 - In the Vercel project **Settings → Environment Variables**, set **`OPENAI_API_KEY`** and optional **`PIXABAY_API_KEY`** (same as local).
 - [`vercel.json`](vercel.json) sets **`maxDuration`: 60** for this route (useful on Pro). On **Hobby**, Vercel caps execution time (often **10s**); if requests time out, upgrade or trim the OpenAI/Pixabay work.
+- The API handler imports shared logic from **`server/src/`**; the import uses a **`.js` suffix** (NodeNext ESM) so Vercel can bundle it—do not switch that import to **`.ts`** or Node will look for missing `.ts` files at runtime.
 
 ## Rate limiting
 
 - **POST `/api/itinerary`:** 5 requests per minute per IP (Express dev server). When exceeded, the API returns **429** with `Too many requests, please try again later`.
-- **Vercel:** the serverless route does not use the Express limiter; for a portfolio this is usually fine.
+- **Vercel:** the serverless route does not use the Express limiter.
 
 ## Client behavior
 
-- **Active trip:** The current `requestId` is stored in `localStorage`. Planning is **synchronous**: the client waits for `POST /api/itinerary`, then navigates to the trip with the itinerary in router state (and saves it locally).
-- **Saved trips:** Completed itineraries are stored locally. Open **Saved trips** (header or trip sidebar) to browse and reopen them; data is **this device only** and survives a server restart (the in-memory job store does not).
+- **Generate flow:** Submitting the home form **navigates to `/trip` immediately** (skeleton UI). **`TripPage`** then calls **`POST /api/itinerary`** once with the planner fields carried in router state. On success, the itinerary is shown and **saved to `localStorage`**; there is **no polling**.
+- **Active trip:** The current `requestId` is stored in `localStorage` so refresh and deep links can reload a trip that was already saved on the device.
+- **Saved trips:** Completed itineraries are stored locally. Open **Saved trips** (header or trip sidebar) to browse and reopen them; the drawer uses a **focus trap** for keyboard users. Data is **this device only**.
 
 ## Project layout
 
 | Path | Role |
 |------|------|
 | `client/` | Vite, React, TypeScript, Tailwind, React Router |
-| `server/` | Express, OpenAI (`gpt-4o-mini`), JSON itinerary generation |
+| `server/` | Express (local API), shared **`generateItinerary`** module (OpenAI + moderation + Pixabay) |
+| `api/` | Vercel serverless entry: `POST /api/itinerary` |
+| `vercel.json` | Vercel build output, SPA rewrite, function `maxDuration` |
+| `tsconfig.json` | Root typecheck (`noEmit`) for `api/` + `server/src/` |

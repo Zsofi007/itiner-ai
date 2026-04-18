@@ -1,8 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronRight, Library, MapPin, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSavedTrips } from "@/lib/storage";
 import type { SavedTrip } from "@/lib/storage";
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getVisibleFocusables(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => el.offsetParent !== null || el.getClientRects().length > 0,
+  );
+}
 
 type Props = {
   open: boolean;
@@ -12,6 +21,8 @@ type Props = {
 
 export function SavedTripsDrawer({ open, onClose, onSelectTrip }: Props) {
   const [trips, setTrips] = useState<SavedTrip[]>([]);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -27,11 +38,51 @@ export function SavedTripsDrawer({ open, onClose, onSelectTrip }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+
+    const id = window.requestAnimationFrame(() => {
+      const root = panelRef.current;
+      if (!root) return;
+      const focusables = getVisibleFocusables(root);
+      (focusables[0] ?? root).focus();
+    });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+
+      const root = panelRef.current;
+      if (!root) return;
+
+      const focusables = getVisibleFocusables(root);
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(id);
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocusRef.current?.focus?.();
+      previousFocusRef.current = null;
+    };
   }, [open, onClose]);
 
   return (
@@ -48,11 +99,13 @@ export function SavedTripsDrawer({ open, onClose, onSelectTrip }: Props) {
         >
           <button
             type="button"
+            tabIndex={-1}
             aria-label="Close saved trips overlay"
             className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm dark:bg-black/60"
             onClick={onClose}
           />
           <motion.aside
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="saved-trips-drawer-title"
