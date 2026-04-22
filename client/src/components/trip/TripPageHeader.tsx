@@ -21,9 +21,17 @@ export function TripPageHeader({
       <div className="page-container flex h-14 items-center justify-between gap-4 sm:h-16">
         <Link
           to="/"
-          className="font-display text-sm font-semibold tracking-tight text-slate-900 transition hover:text-teal-700 dark:text-white dark:hover:text-teal-300"
+          className="font-display flex items-center gap-2 text-sm font-semibold tracking-tight text-slate-900 transition hover:text-teal-700 dark:text-white dark:hover:text-teal-300"
         >
-          ← ItinerAI
+          <img
+            src="/itiner-ai.png"
+            alt="ItinerAI"
+            className="h-10 w-10 dark:rounded-md dark:bg-white"
+            loading="eager"
+            decoding="async"
+          />
+          <span aria-hidden>←</span>
+          <span>ItinerAI</span>
         </Link>
         <div className="flex shrink-0 items-center gap-2">
           <SavedTripsTrigger variant="compact" />
